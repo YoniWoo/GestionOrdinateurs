@@ -12,3 +12,4 @@
 **/parcinfo.db
 **/*.db-shm
 **/*.db-wal
+!GestionOrdinateurs.API/parcinfo.db
