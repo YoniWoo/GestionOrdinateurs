@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+.vs/
+.idea/
+.env
+.env.*
+!.env.example
+**/appsettings.Local.json
+**/Logs/
+*.log
+*.db
+*.db-shm
+*.db-wal

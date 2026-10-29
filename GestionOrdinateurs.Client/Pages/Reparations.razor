@@ -1,0 +1,92 @@
+@page "/reparations"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using System.Net
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>Historique des réparations</PageTitle>
+
+<h3>Historique des réparations</h3>
+
+@if (_reparations.Count == 0)
+{
+    <p>Aucune réparation enregistrée.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Ordinateur</th>
+                <th>Technicien</th>
+                <th>Type de réparation</th>
+                <th>Date d'intervention</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var reparation in _reparations)
+            {
+                <tr>
+                    <td>@reparation.NomOrdinateur</td>
+                    <td>@reparation.Technicien</td>
+                    <td>@reparation.TypeReparation</td>
+                    <td>
+                        @reparation.DateIntervention.ToString("dd/MM/yyyy HH:mm")
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<HistoriqueReparationResponse> _reparations = new();
+    private string? _erreur;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            using var client =
+                HttpClientFactory.CreateClient("GestionOrdinateurs");
+
+            using var reponse = await client.GetAsync(
+                "api/reparations/historique");
+
+            if (reponse.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _erreur = "Votre session a expiré. Veuillez vous reconnecter.";
+                return;
+            }
+
+            if (reponse.StatusCode == HttpStatusCode.Forbidden)
+            {
+                _erreur = "Vous n'avez pas accès à cet historique.";
+                return;
+            }
+
+            if (!reponse.IsSuccessStatusCode)
+            {
+                _erreur = "Impossible de récupérer les réparations.";
+                return;
+            }
+
+            _reparations = await reponse.Content
+                .ReadFromJsonAsync<List<HistoriqueReparationResponse>>()
+                ?? new();
+        }
+        catch (HttpRequestException)
+        {
+            _erreur = "Impossible de contacter l'API.";
+        }
+        catch (TaskCanceledException)
+        {
+            _erreur = "Le délai de réponse est dépassé.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            _erreur = "La réponse de l'API est invalide.";
+        }
+    }
+}

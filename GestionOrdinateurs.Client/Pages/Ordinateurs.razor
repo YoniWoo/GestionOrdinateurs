@@ -1,0 +1,89 @@
+@page "/ordinateurs"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+
+@using System.Net
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>Ordinateurs</PageTitle>
+
+<h3>Ordinateurs</h3>
+
+@if (_ordinateurs.Count == 0)
+{
+    <p>Aucun ordinateur enregistré.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Prix</th>
+                <th>Devise</th>
+                <th>Vendu</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ordinateur in _ordinateurs)
+            {
+                <tr>
+                    <td>@ordinateur.Nom</td>
+                    <td>@ordinateur.Prix</td>
+                    <td>EUR</td>
+                    <td>@(ordinateur.Vendu ? "Oui" : "Non")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<OrdinateurListeResponse> _ordinateurs = new();
+    private string? _erreur;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            using var client =
+                HttpClientFactory.CreateClient("GestionOrdinateurs");
+
+            using var reponse = await client.GetAsync("api/ordinateurs");
+
+            if (reponse.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _erreur = "Votre session a expiré. Veuillez vous reconnecter.";
+                return;
+            }
+
+            if (reponse.StatusCode == HttpStatusCode.Forbidden)
+            {
+                _erreur = "Vous n'avez pas accès à cette liste.";
+                return;
+            }
+
+            if (!reponse.IsSuccessStatusCode)
+            {
+                _erreur = "Impossible de récupérer les ordinateurs.";
+                return;
+            }
+
+            _ordinateurs = await reponse.Content
+                .ReadFromJsonAsync<List<OrdinateurListeResponse>>()
+                ?? new();
+        }
+        catch (HttpRequestException)
+        {
+            _erreur = "Impossible de contacter l'API.";
+        }
+        catch (TaskCanceledException)
+        {
+            _erreur = "Le délai de réponse est dépassé.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            _erreur = "La réponse de l'API est invalide.";
+        }
+    }
+}
