@@ -1,0 +1,66 @@
+name: Tests et publication Docker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  DOCKER_ACCOUNT: ${{ secrets.DOCKER_ACCOUNT }}
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v5
+
+      - name: Installer .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restaurer les dépendances
+        run: dotnet restore
+
+      - name: Compiler la solution
+        run: dotnet build --no-restore
+
+      - name: Exécuter les tests
+        run: dotnet test GestionOrdinateurs.Tests/GestionOrdinateurs.Tests.csproj --no-build --verbosity normal
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: tests
+    environment: dev
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v5
+
+      - name: Se connecter à Docker Hub
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          printf '%s' "$DOCKER_PASSWORD" |
+            docker login --username "$DOCKER_USERNAME" --password-stdin
+
+      - name: Construire les images
+        run: |
+          docker build -t "$DOCKER_ACCOUNT/authentificationapi:latest" -f AuthentificationApi/Dockerfile .
+          docker build -t "$DOCKER_ACCOUNT/gestionordinateurs-api:latest" -f GestionOrdinateurs.API/Dockerfile .
+          docker build -t "$DOCKER_ACCOUNT/gestionordinateurs-gateway:latest" -f GestionOrdinateurs.Gateway/Dockerfile .
+          docker build -t "$DOCKER_ACCOUNT/gestionordinateurs-client:latest" -f GestionOrdinateurs.Client/Dockerfile .
+
+      - name: Publier les images
+        run: |
+          docker push "$DOCKER_ACCOUNT/authentificationapi:latest"
+          docker push "$DOCKER_ACCOUNT/gestionordinateurs-api:latest"
+          docker push "$DOCKER_ACCOUNT/gestionordinateurs-gateway:latest"
+          docker push "$DOCKER_ACCOUNT/gestionordinateurs-client:latest"
