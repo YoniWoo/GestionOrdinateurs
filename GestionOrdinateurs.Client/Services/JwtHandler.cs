@@ -1,30 +1,19 @@
-using System.Net.Http.Headers;
-using Blazored.SessionStorage;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 
 namespace GestionOrdinateurs.Client.Services;
 
-public class JwtHandler : DelegatingHandler
+public class JwtHandler : AuthorizationMessageHandler
 {
-    private readonly ISessionStorageService _sessionStorage;
-
-    public JwtHandler(ISessionStorageService sessionStorage)
+    public JwtHandler(
+        IAccessTokenProvider fournisseurToken,
+        NavigationManager navigation)
+        : base(fournisseurToken, navigation)
     {
-        _sessionStorage = sessionStorage;
-    }
-
-    protected override async Task<HttpResponseMessage> SendAsync(
-        HttpRequestMessage request,
-        CancellationToken cancellationToken)
-    {
-        var token = await _sessionStorage
-            .GetItemAsync<string>("jwtToken");
-
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", token);
-        }
-
-        return await base.SendAsync(request, cancellationToken);
+        ConfigureHandler(
+            authorizedUrls: new[]
+            {
+                "http://localhost:5010/"
+            });
     }
 }

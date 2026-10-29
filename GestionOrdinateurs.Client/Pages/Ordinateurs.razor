@@ -73,6 +73,10 @@ else
                 .ReadFromJsonAsync<List<OrdinateurListeResponse>>()
                 ?? new();
         }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
         catch (HttpRequestException)
         {
             _erreur = "Impossible de contacter l'API.";

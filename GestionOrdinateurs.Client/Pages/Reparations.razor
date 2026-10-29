@@ -76,6 +76,10 @@ else
                 .ReadFromJsonAsync<List<HistoriqueReparationResponse>>()
                 ?? new();
         }
+        catch (AccessTokenNotAvailableException exception)
+        {
+            exception.Redirect();
+        }
         catch (HttpRequestException)
         {
             _erreur = "Impossible de contacter l'API.";

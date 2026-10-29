@@ -1,107 +1,20 @@
 @page "/login"
 
-@using System.Net
-@using System.Net.Http.Json
-@inject IHttpClientFactory HttpClientFactory
-@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
-@inject JwtAuthenticationStateProvider AuthProvider
 @inject NavigationManager Navigation
 
 <PageTitle>Connexion</PageTitle>
 
 <h3>Connexion</h3>
 
-<EditForm Model="@_requete" OnValidSubmit="ConnecterAsync">
-    <DataAnnotationsValidator />
+<p>Connectez-vous avec votre compte Keycloak.</p>
 
-    <div class="mb-3">
-        <label for="login" class="form-label">Login</label>
-
-        <InputText id="login"
-                   class="form-control"
-                   @bind-Value="_requete.Login" />
-
-        <ValidationMessage For="@(() => _requete.Login)" />
-    </div>
-
-    <button type="submit"
-            class="btn btn-primary"
-            disabled="@_connexionEnCours">
-        @(_connexionEnCours ? "Connexion..." : "Se connecter")
-    </button>
-</EditForm>
-
-@if (!string.IsNullOrWhiteSpace(_erreur))
-{
-    <p class="text-danger mt-3" role="alert">@_erreur</p>
-}
+<button class="btn btn-primary" @onclick="Connecter">
+    Se connecter
+</button>
 
 @code {
-    private readonly ConnexionRequete _requete = new();
-    private string? _erreur;
-    private bool _connexionEnCours;
-
-    private async Task ConnecterAsync()
+    private void Connecter()
     {
-        _erreur = null;
-        _connexionEnCours = true;
-
-        try
-        {
-            using var client =
-                HttpClientFactory.CreateClient("Authentification");
-
-            using var reponse = await client.PostAsJsonAsync(
-                "api/authentication",
-                _requete);
-
-            if (reponse.StatusCode == HttpStatusCode.NotFound)
-            {
-                _erreur = "Cet utilisateur n'existe pas.";
-                return;
-            }
-
-            if (!reponse.IsSuccessStatusCode)
-            {
-                _erreur =
-                    "La connexion a échoué. Réessayez ultérieurement.";
-                return;
-            }
-
-            var resultat = await reponse.Content
-                .ReadFromJsonAsync<ConnexionResponse>();
-
-            if (resultat == null
-                || string.IsNullOrWhiteSpace(resultat.Token))
-            {
-                _erreur = "Le serveur n'a pas renvoyé de token.";
-                return;
-            }
-            
-            await SessionStorage.SetItemAsync(
-                "jwtToken",
-                resultat.Token);
-
-            AuthProvider.NotifierConnexion(resultat.Token);
-
-            Navigation.NavigateTo("/");
-        }
-        catch (HttpRequestException)
-        {
-            _erreur =
-                "Impossible de contacter le service d'authentification.";
-        }
-        catch (TaskCanceledException)
-        {
-            _erreur = "Le délai de connexion est dépassé.";
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            _erreur = "La réponse du serveur est invalide.";
-        }
-        finally
-        {
-            _connexionEnCours = false;
-        }
+        Navigation.NavigateToLogin("authentication/login");
     }
 }

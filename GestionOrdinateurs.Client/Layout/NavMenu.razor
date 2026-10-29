@@ -1,6 +1,4 @@
 ﻿@inject NavigationManager Navigation
-@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
-@inject JwtAuthenticationStateProvider AuthProvider
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -40,7 +38,7 @@
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
-                    <button type="button" class="btn-linl nav-link" @onclick="DeconnecterAsync">
+                    <button type="button" class="btn btn-link nav-link" @onclick="Deconnecter">
                         Déconnexion
                     </button>
                 </div>
@@ -59,10 +57,8 @@
         collapseNavMenu = !collapseNavMenu;
     }
 
-    private async Task DeconnecterAsync()
+    private void Deconnecter()
     {
-        await SessionStorage.RemoveItemAsync("jwtToken");
-        AuthProvider.NotifierDeconnexion();
-        Navigation.NavigateTo("/");
+        Navigation.NavigateToLogout("authentication/logout");
     }
 }

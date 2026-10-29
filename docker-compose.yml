@@ -16,6 +16,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HOSTNAME: http://localhost:8180
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
     command: start-dev
@@ -34,6 +35,9 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5081
+      Keycloak__Authority: "http://localhost:8180/realms/gestion-ordinateurs"
+      Keycloak__MetadataAddress: "http://keycloak:8080/realms/gestion-ordinateurs/.well-known/openid-configuration"
+      Keycloak__Audience: "gestionordinateurs-api"
     ports:
       - "5081:5081"
     networks:

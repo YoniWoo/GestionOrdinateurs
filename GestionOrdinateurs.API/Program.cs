@@ -2,8 +2,6 @@ using GestionOrdinateurs.API.Services;
 using GestionOrdinateurs.API.Data;
 using Microsoft.EntityFrameworkCore;
 using GestionOrdinateurs.Shared;
-using System.Security.Claims;
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -37,38 +35,63 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "";
-var key = Encoding.ASCII.GetBytes(jwtKey);
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false
-    };
-    options.Events = new JwtBearerEvents
+        options.Authority = builder.Configuration["Keycloak:Authority"];
+        options.MetadataAddress =
+            builder.Configuration["Keycloak:MetadataAddress"];
+
+        options.Audience = builder.Configuration["Keycloak:Audience"];
+
+        options.RequireHttpsMetadata = false;
+
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Keycloak:Authority"],
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            NameClaimType = "preferred_username",
+            RoleClaimType = "role"
+        };
+
+        options.Events = new JwtBearerEvents
         {
             OnTokenValidated = context =>
             {
-                Console.WriteLine($"Utilisateur utilisant un Token Valide --- {context.Principal?.Identity?.Name ?? "Anonymous"}");
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("Authentification");
+
+                logger.LogInformation(
+                    "Token valide pour {Utilisateur}",
+                    context.Principal?.Identity?.Name);
+
                 return Task.CompletedTask;
             },
+
             OnAuthenticationFailed = context =>
             {
-                Console.WriteLine("Token Invalide");
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("Authentification");
+
+                logger.LogWarning(
+                    context.Exception,
+                    "Échec de la validation du token");
+
                 return Task.CompletedTask;
             }
         };
-});
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddDbContextFactory<ParcInformatiqueContext>();
 
