@@ -1,0 +1,94 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_DB: GestionOrdinateursDb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - appnet
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8180
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    command: start-dev
+    ports:
+      - "8180:8080"
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    networks:
+      - appnet
+
+  gestionordinateurs-api:
+    image: ${DOCKER_ACCOUNT}/gestionordinateurs-api:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5081
+    ports:
+      - "5081:5081"
+    networks:
+      - appnet
+
+  authentification-api:
+    image: ${DOCKER_ACCOUNT}/authentificationapi:latest
+    build:
+      context: .
+      dockerfile: AuthentificationApi/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5006
+
+      Apis__GestionOrdinateurs: http://gestionordinateurs-api:5081/
+    ports:
+      - "5006:5006"
+    depends_on:
+      - gestionordinateurs-api
+    networks:
+      - appnet
+
+  gateway:
+    image: ${DOCKER_ACCOUNT}/gestionordinateurs-gateway:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.Gateway/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5010
+
+      ReverseProxy__Clusters__gestion-api__Destinations__destination-principale__Address: http://gestionordinateurs-api:5081/
+    ports:
+      - "5010:5010"
+    depends_on:
+      - gestionordinateurs-api
+    networks:
+      - appnet
+
+  client:
+    image: ${DOCKER_ACCOUNT}/gestionordinateurs-client:latest
+    build:
+      context: .
+      dockerfile: GestionOrdinateurs.Client/Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - gateway
+      - authentification-api
+    networks:
+      - appnet
+
+volumes:
+  postgres_data:
+  keycloak_data:
+
+networks:
+  appnet:

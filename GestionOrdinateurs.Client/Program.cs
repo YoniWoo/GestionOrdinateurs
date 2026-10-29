@@ -22,7 +22,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(
 
 builder.Services.AddHttpClient("Authentification", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5082/");
+    client.BaseAddress = new Uri("http://localhost:5006/");
 });
 
 builder.Services.AddTransient<JwtHandler>();
